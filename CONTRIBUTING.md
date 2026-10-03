@@ -35,6 +35,19 @@ once accepted; a changed decision gets a new record that supersedes the old one.
 If you are settling an existing open decision, update that record's status and
 the index table rather than writing a new one.
 
+**Then fix the count.** Four places outside the records state how many decisions
+are open or how many gate M0, in prose: `README.md`, this file,
+`docs/decisions/README.md`, and ADR-0003's Consequences. They are not generated,
+so settling a decision without editing them leaves the repository contradicting
+itself — which has already happened twice here. Before opening the pull request:
+
+```sh
+grep -rn 'six open\|six decisions\|six records\|gate M0\|exit criteria name' \
+  README.md CONTRIBUTING.md docs/decisions/
+```
+
+Every hit must agree with the index table.
+
 ## Scope discipline
 
 The roadmap names scope creep as a risk, and answers it with P0/P1/P2 tags,
@@ -64,17 +77,23 @@ than quality ones:
 
 ## Checks
 
-The repository currently holds no compiled code, so CI only validates data and
-documentation:
+The repository currently holds no compiled code, so CI validates data,
+documentation, and one repository-state invariant. Two of the three run locally:
 
 ```sh
 python3 tools/validate_compatibility.py   # device database integrity
 python3 tools/check_links.py              # relative links in Markdown
 ```
 
-Both use the Python standard library only, deliberately — the tooling must not
-prejudge [ADR-0003](docs/decisions/0003-engine-language-and-ui-stack.md).
-Engine jobs join CI at M1.
+The third is a shell step in [`.github/workflows/checks.yml`](.github/workflows/checks.yml):
+it fails the build if a licence file exists while
+[ADR-0002](docs/decisions/0002-licence.md) is still marked `Open`, or if the
+record is no longer `Open` and no licence file exists. It can fail a pull
+request on its own, so it is worth knowing about before adding a `LICENSE`.
+
+Both Python tools use the standard library only, deliberately — the tooling must
+not prejudge [ADR-0003](docs/decisions/0003-engine-language-and-ui-stack.md).
+They need Python 3.11 or newer, for `tomllib`. Engine jobs join CI at M1.
 
 ## Commit messages
 

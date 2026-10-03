@@ -3,8 +3,11 @@
 The quality specifications in [roadmap 7.7](ROADMAP.md) state *targets*. This
 document states how each one is **measured**: the signal, the procedure, and the
 criterion that distinguishes a pass from a fail. A target without a procedure
-cannot gate a release, and the phase acceptance lists (4.13, 5.10, 6.6) all end
-with "the quality table rows pass".
+cannot gate a release. The Phase 1 and Phase 2 acceptance lists (4.13, 5.10)
+each end with "the quality table rows pass"; Phase 3 (6.6) does not cite the
+table, spelling the same criteria out inline instead — published WASAPI and ASIO
+latency, one profile loading on both platforms, and a 24 h soak including sleep
+and resume — which is exactly 7.7's single Phase 3 row, covered here by QS-19.
 
 Figures are reproduced from the roadmap. They are targets to validate on the
 reference rig, not promises, and where a figure is set by converters rather than
@@ -20,31 +23,40 @@ a test can run and what it can prove.
 | **Offline** | CI, no sound card, faster than real time (4.1) | Arithmetic: nulls, gain accuracy, filter responses, curves, alignment |
 | **Rig** | Reference hardware with loopback cables (section 8) | Everything involving a converter, a clock, a bus, a driver or an operating system |
 
-The split matters for scheduling, and it is uneven by phase. Ten of the nineteen
-specifications run entirely offline and QS-06 has an offline part, so eleven can
-be exercised with no sound card at all — but they are not spread evenly:
+The split matters for scheduling, and it is uneven twice over — by phase, and
+by milestone. Ten of the nineteen specifications run entirely offline; QS-03 and
+QS-06 each add an offline Part A, so **twelve** can be exercised with no sound
+card at all.
 
-| Phase | Specifications | Fully offline |
-|---|---|---|
-| 1 | 10 | 4 — QS-01, QS-04, QS-05, QS-07 (plus QS-06 part A) |
-| 2 | 8 | 6 — QS-11 to QS-15, QS-18 |
-| 3 | 1 | 0 |
+| Phase | Specifications | Fully offline | Part-offline |
+|---|---|---|---|
+| 1 | 10 | 4 — QS-01, QS-04, QS-05, QS-07 | QS-03A, QS-06A |
+| 2 | 8 | 6 — QS-11 to QS-15, QS-18 | — |
+| 3 | 1 | 0 | — |
 
 Phase 1 is mostly rig work, because most of its targets are about converters,
-clocks, buses and drivers, which no renderer can simulate. The four it does
-cover offline are the null and accuracy tests — the ones that establish the
-engine is arithmetically correct — so M1 can gate those before M2 produces its
-first sound.
+clocks, buses and drivers, which no renderer can simulate.
+
+**A harness is not a schedule.** Offline does not mean runnable at M1: a test can
+need no sound card and still need engine features that arrive later. Of Phase 1's
+four fully-offline tests, only QS-01 and QS-05 are reachable at M1, which is
+graph, strips, buses, sends, smoothing and meters. QS-04 needs patching (M3), and
+QS-07 needs a patch change, a profile switch and a layout switch, so it is not
+complete until profiles land at M5. Each test below names what it needs; do not
+read the Offline column as "ready first".
 
 Phase 2 inverts: six of eight are offline, because DSP correctness is
 arithmetic. That is where building the offline renderer first (4.1, M1) pays
 off, and it is worth knowing in advance that the early payoff is smaller than
 the eventual one.
 
-A test is listed as offline only where the result is genuinely independent of
-hardware. THD+N, for instance, is converter-limited in the rig and therefore a
-rig test, even though the engine's own arithmetic contribution can be bounded
-offline.
+A test is listed **Offline** only where the whole result is independent of
+hardware, and **Both** where it genuinely splits. THD+N (QS-03) splits: the
+engine's own arithmetic contribution is bounded offline and that part gates CI,
+while the absolute figure is converter-limited and can only be measured on the
+rig. QS-06 splits the same way. Neither is a rig-only test, and neither is
+fully offline — hence Both, and hence twelve specifications that touch the
+offline harness rather than ten.
 
 ## Test index
 
@@ -52,7 +64,7 @@ offline.
 |---|---|---|---|
 | [QS-01](#qs-01-unity-path-transparency) | Unity-path transparency | Offline | 1 |
 | [QS-02](#qs-02-engine-added-latency) | Engine-added latency | Rig | 1 |
-| [QS-03](#qs-03-noise-and-distortion) | Noise and distortion | Rig | 1 |
+| [QS-03](#qs-03-noise-and-distortion) | Noise and distortion | Both | 1 |
 | [QS-04](#qs-04-channel-isolation) | Channel isolation | Offline | 1 |
 | [QS-05](#qs-05-gain-and-pan-accuracy) | Gain and pan accuracy | Offline | 1 |
 | [QS-06](#qs-06-resampler-quality) | Resampler quality | Both | 1 |
@@ -109,8 +121,13 @@ falsifiable. If it fails, every other transparency claim is void.
 - **Record.** Input, processing, output and round-trip figures separately, since
   4.6 requires all four to be displayed in the UI. Cross-check the displayed
   figures against the measured ones — this test validates the display too.
-- **Repeat for** each backend (ALSA direct, PipeWire) and each latency setting,
-  and publish per device, not as one headline number (4.6).
+- **Repeat for** every backend 4.7 defines — ALSA direct, PipeWire, PulseAudio
+  and JACK — and each latency setting, publishing per device rather than as one
+  headline number (4.6). 4.13's acceptance criterion is unqualified ("latency
+  numbers are published for each backend"), so PulseAudio and JACK are in scope
+  even though they map to Safe and to PipeWire's JACK layer respectively; a
+  figure that is merely poor is still a figure, and omitting it is what makes
+  the Safe label unverifiable.
 
 ### QS-03 Noise and distortion
 
@@ -227,9 +244,11 @@ mid-range CPU, without heavy FX.
 - **Pass.** Mean under 25% of one core, and report the 99.9th percentile and
   maximum. A mean that passes while the worst case exceeds the period deadline
   is a failing engine, and the mean alone will not show it.
-- **Define "mid-range CPU"** concretely in the rig specification below, with the
-  measurement published against the named part. Re-measure when the reference
-  part changes.
+- **"Mid-range CPU" is not yet defined anywhere**, and this figure is
+  meaningless until it is. Naming it is an M0 task: pick one part, record it in
+  the rig specification below, publish every figure against it, and re-measure
+  when it changes. Until a part is named, treat QS-09 as unrunnable rather than
+  as passing.
 - **Also record.** DSP load as the UI reports it (4.11), checked against
   measurement, since users will make decisions based on that number.
 
@@ -340,10 +359,17 @@ sweep artifacts below −90 dBFS.
 **Target.** AES67 over a wired LAN adds under 10 ms — aiming for 3 to 5 ms at
 1 ms packet time — with no dropouts over 24 h.
 
-- **Procedure.** Two machines, wired, PTPv2 via linuxptp. Measure end-to-end
-  latency by impulse with both machines' clocks referenced to the same PTP
-  domain. Run 24 hours logging dropouts, jitter and buffer behaviour.
-- **Pass.** Under 10 ms added; no dropouts in 24 h.
+- **Procedure.** Two machines, wired, PTPv2 via linuxptp, at the roadmap's
+  default 1 ms packet time (5.7) — state the packet time with every figure,
+  since latency scales with it and the 3-to-5 ms aim is quoted at 1 ms.
+  Measure end-to-end latency by impulse with both machines' clocks referenced to
+  the same PTP domain. Run 24 hours logging dropouts, jitter and buffer
+  behaviour.
+- **Baseline.** The target is *added* latency, so measure what is subtracted:
+  the same impulse through both machines' local paths with no network hop, as
+  QS-02 does for the engine. Added latency is the difference. Without this the
+  criterion cannot be evaluated at all.
+- **Pass.** Under 10 ms added over that baseline; no dropouts in 24 h.
 - **Also test.** Behaviour when PTP is lost mid-stream, when the switch does not
   honour DSCP marking, and under induced packet loss — a clean-LAN-only result
   will not predict a user's network.
@@ -364,8 +390,13 @@ sweep artifacts below −90 dBFS.
   test will not reveal it.
 - **Also assert.** 100% equals 0 dB per the defined curve, and the "no double
   attenuation" option (5.8) genuinely leaves the OS volume at 100%.
-- **Repeat** on each certified desktop environment, since this is where
-  behaviour diverges most.
+- **Repeat** on each desktop environment in the matrix, since this is where
+  behaviour diverges most. Note that the roadmap certifies *distributions*
+  (open decision 6, ADR-0007), not desktop environments, while 4.4 and section 10
+  make the desktop the thing that actually varies: KDE via StatusNotifier versus
+  GNOME needing an extension, and X11 grabs versus Wayland portals. Defining
+  that desktop matrix — at minimum KDE and GNOME, on X11 and on Wayland — is an
+  open item for ADR-0007; this test cannot be scoped until it exists.
 
 ### QS-18 Plugin safety
 
@@ -422,20 +453,32 @@ PCIe interface, pass the suite" (4.13).
 **Interfaces.** To satisfy 4.13, at minimum: 10 USB class-compliant interfaces
 from different vendors spanning USB 2 and USB 3, budget and professional; one
 Thunderbolt or PCIe interface; one Bluetooth headset for the profile-switch case
-in 4.4; and one device with a high channel count for QS-04 and QS-09. Record
-every device in `data/compatibility/`.
+in 4.4; and one device with a high channel count for QS-09. Record every device
+in `data/compatibility/`.
+
+QS-04 is listed as Offline and needs no hardware: its channel count is a
+property of the graph, not of a card. A high-channel device is still worth
+having to confirm the offline result holds against a real multichannel driver,
+but that confirmation is a rig extra, not what QS-04 is gated on.
 
 **Fixtures.** Analogue loopback cables, a digital loopback where available,
 a measurement-grade interface for QS-03 Part B, a switchable USB hub for
 QS-10's power-event cases, and two machines on a managed switch with DSCP and
 PTP support for QS-16.
 
+QS-10 also covers monitor sleep, and 4.2's ghost-device cases are an HDMI
+monitor going to sleep, a USB hub and a dock. The hub alone does not cover
+them, so the rig additionally needs a display with HDMI or DisplayPort audio
+that can be put to sleep, and a dock or docking station. Without both, two of
+the three cases 4.2 names go untested.
+
 **Hosts.** A defined mid-range CPU for QS-09, named explicitly so the figure
 means something. One host per certified distribution (ADR-0007), plus a
 PulseAudio-only configuration and a Windows 10 and a Windows 11 host for Phase 3.
 
 **Automation.** The offline suite runs on every commit. The rig suite runs
-nightly, with the 24 h tests (QS-06B, QS-08, QS-16) on a weekly schedule. Results
+nightly, with the 24 h tests (QS-06B, QS-08, QS-16, and QS-19's soak once
+Phase 3 starts) on a weekly schedule. Results
 are published per device rather than as a single headline figure (4.6).
 
 ## Candidate tooling
@@ -447,7 +490,7 @@ Measurements follow AES17-style methods where applicable, using open tools
 |---|---|
 | Round-trip latency | `jack_iodelay`, or an impulse method in the harness |
 | Signal generation and capture | `alsabat` (alsa-utils), `sox`, the project's own tone generator (4.11) |
-| FFT, THD+N, sweep analysis | A Python harness over numpy/scipy — keeps the offline suite dependency-light and scriptable in CI |
+| FFT, THD+N, sweep analysis | numpy/scipy, or the engine's own analysis code. Note the posture change: `tools/` is standard-library-only so it prejudges nothing about ADR-0003, but numerical analysis is not, and a measurement harness may reasonably take dependencies the repository tooling does not. Decide deliberately rather than by drift, and keep the two sets of rules stated separately |
 | Loudness conformance | The published EBU Tech 3341 and 3342 signals |
 | Null and bit-exactness | Sample-level comparison in the offline harness; no external tool needed |
 
@@ -468,3 +511,11 @@ These are not yet answerable and should be resolved as the named milestones land
 4. **The engine language (ADR-0003)** decides the offline harness's host
    language. The Python tooling here is deliberately independent of it, but the
    harness that drives the renderer will not be.
+5. **The desktop matrix for QS-17** does not exist. ADR-0007 certifies
+   distributions; 4.4 and section 10 make the *desktop* the thing that varies
+   (KDE versus GNOME, X11 versus Wayland). QS-17 and the tray and hotkey work
+   cannot be scoped until that matrix is named — it belongs in ADR-0007.
+6. **Whether the measurement harness may take dependencies.** `tools/` is
+   standard-library-only so it prejudges nothing about ADR-0003, but numerical
+   analysis realistically wants numpy and scipy. Decide the two postures
+   separately and in the open, rather than letting the stricter one erode.

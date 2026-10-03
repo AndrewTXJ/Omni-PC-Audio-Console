@@ -1,5 +1,17 @@
 # Template for a new compatibility entry. Copy into devices.toml and fill in.
 # See SCHEMA.md for every field and the integrity rules the validator enforces.
+#
+# IMPORTANT: this file is a template, not a valid entry, and the validator is
+# never run against it. Two rules bite as soon as you paste it into devices.toml:
+#
+#   * An "untested" device may not carry measurements (rule: status must match
+#     the evidence). So KEEP the [[device.measurement]] block commented out
+#     until you have actually measured something and set status = "supported".
+#   * date = "YYYY-MM-DD" is rejected as a placeholder, so [device.tested] must
+#     stay commented out until you have a real date.
+#
+# Fill the top block, leave the two commented blocks alone, and the entry will
+# validate as "untested". Uncomment them when you have evidence.
 
 [[device]]
 vendor = ""
@@ -16,22 +28,24 @@ quirks = []
 alsa_controls = []
 notes = ""
 sources = []
+# reason = ""               # REQUIRED when status = "unsupported"
+# workaround = ""
 
-# Required once status is "supported".
-[device.tested]
-date = "YYYY-MM-DD"
-kernel = ""
-sound_server = ""
-distro = ""
-tester = ""
+# Required once status is "supported". Uncomment and fill in with a real date.
+# [device.tested]
+# date = "2026-01-31"
+# kernel = "6.12.0"
+# sound_server = "pipewire 1.0.5"
+# distro = ""
+# tester = ""
 
 # At least one required once status is "supported". One per backend and setting.
-[[device.measurement]]
-backend = "alsa"             # see SCHEMA.md for the full list
-setting = "lowest"           # lowest | balanced | safe
-period_frames = 0
-round_trip_ms = 0.0
-engine_added_periods = 0
-kernel = ""
-sound_server = ""
-notes = ""
+# [[device.measurement]]
+# backend = "alsa"          # see SCHEMA.md for the full list
+# setting = "lowest"        # lowest | balanced | safe
+# period_frames = 64
+# round_trip_ms = 4.2
+# engine_added_periods = 0
+# kernel = "6.12.0"
+# sound_server = "pipewire 1.0.5"
+# notes = ""

@@ -35,21 +35,35 @@ jobs:
       - name: Check relative links in Markdown
         run: python3 tools/check_links.py
 
-      - name: Confirm no LICENSE is claimed while ADR-0002 is open
+      - name: Confirm the licence file and ADR-0002 agree
         # The licence is an open decision. A LICENSE file appearing without that
         # record being updated would mean the repository states terms its own
-        # decision log says are unsettled.
+        # decision log says are unsettled -- and the reverse, an Accepted record
+        # with no licence file, is just as wrong.
+        #
+        # nullglob matters here: without it an unmatched pattern is passed
+        # through literally, so `ls LICENSE* COPYING*` succeeds only when BOTH
+        # exist -- which made an earlier version of this guard pass in exactly
+        # the cases it was written to catch.
         run: |
           set -euo pipefail
-          status=$(grep -m1 '^- \*\*Status:\*\*' docs/decisions/0002-licence.md)
+          shopt -s nullglob
+          status=$(grep -m1 '^- \*\*Status:\*\* ' docs/decisions/0002-licence.md || true)
+          if [ -z "${status}" ]; then
+            echo "::error::Could not read the Status line from docs/decisions/0002-licence.md." >&2
+            echo "Expected a line starting '- **Status:** '." >&2
+            exit 1
+          fi
           echo "ADR-0002 ${status}"
-          if ls LICENSE* COPYING* >/dev/null 2>&1; then
-            if echo "${status}" | grep -q 'Open'; then
-              echo "::error::A licence file exists but ADR-0002 is still marked Open." >&2
+          licences=(LICENSE* COPYING* LICENCE*)
+          echo "licence files found: ${#licences[@]} ${licences[*]-}"
+          if echo "${status}" | grep -qw 'Open'; then
+            if [ "${#licences[@]}" -gt 0 ]; then
+              echo "::error::A licence file exists (${licences[*]}) but ADR-0002 is still marked Open." >&2
               echo "Update docs/decisions/0002-licence.md in the same change." >&2
               exit 1
             fi
-          elif ! echo "${status}" | grep -q 'Open'; then
+          elif [ "${#licences[@]}" -eq 0 ]; then
             echo "::error::ADR-0002 is no longer Open but no licence file exists." >&2
             exit 1
           fi

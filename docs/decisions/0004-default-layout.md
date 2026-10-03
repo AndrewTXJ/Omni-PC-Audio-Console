@@ -44,9 +44,22 @@ reasoning alone, because the question is empirical and M0 has the means to
 answer it.
 
 What would settle it: the M0 usability tests on the clickable prototype
-(section 8, M0). Test Compact and Standard against the 4.13 acceptance task and
-measure time-to-success and whether users notice the layout switch at all. If
-template-implied sizing tests well, this record closes as "no global default".
+(section 8, M0) — but note that testing Compact against Standard does **not**
+test the third option, so the experiment has to cover three arms, not two:
+
+1. Compact as the global default.
+2. Standard as the global default.
+3. No global default: the first-run goal picks the layout, per 2.5's goal list
+   and 4.10's templates.
+
+Measure time-to-success on the 4.13 acceptance task, whether users ever notice
+the layout switch, and — for arm 3 specifically — whether a user whose chosen
+template runs out of strips can find the switch. Arm 3 only wins if that
+recovery path works; an unnoticed switch is what makes running out of channels a
+dead end rather than an inconvenience.
+
+If arm 3 tests well, this record closes as "no global default", and 4.10's
+templates become the surface that needs explicit strip and bus counts.
 
 ## Consequences
 

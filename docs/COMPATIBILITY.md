@@ -6,16 +6,22 @@ this page explains what it means and how to contribute to it.
 
 ## Status: nothing measured yet
 
-**No device has been tested.** The engine does not exist yet (the repository is
-pre-M0), so the list currently holds only the limits the roadmap already knows
-about. It is not yet useful for deciding what to buy.
+**No device has been tested, and nothing here is `supported`.** The engine does
+not exist yet (the repository is pre-M0), so the list holds only the limits the
+roadmap already knows about — two unsupported Thunderbolt families from 4.8, and
+one family prioritised for the rig. It is not yet useful for deciding what to
+buy.
 
-| Status | Devices |
-|---|---|
-| Supported | 0 |
-| Partial | 0 |
-| Unsupported | 2 — recorded as families, from roadmap 4.8 |
-| Untested | 1 — prioritised for the rig |
+For the current breakdown by status, ask the data rather than this page:
+
+```sh
+python3 tools/validate_compatibility.py
+# devices.toml: 3 device(s) valid (unsupported: 2, untested: 1), 0 warning(s)
+```
+
+That count is deliberately not duplicated in prose here. A hand-copied tally on
+the page people use to choose hardware is exactly the kind of number that goes
+quietly stale, and the validator already computes it on every run.
 
 The Phase 1 acceptance criteria require at least 10 USB class-compliant
 interfaces from different vendors, plus one Thunderbolt or PCIe interface, to

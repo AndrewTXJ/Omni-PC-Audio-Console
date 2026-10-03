@@ -13,7 +13,8 @@ validation needs no dependencies while ADR-0003 is open.
 ## Integrity rules
 
 The validator enforces these, because a compatibility list that carries
-unsupported claims is worse than no list:
+unsupported claims is worse than no list. Every rule below is covered by a
+regression fixture; none is aspirational.
 
 1. `status = "supported"` **requires** at least one measurement block and a
    `[device.tested]` block. A device cannot be called supported without someone
@@ -22,8 +23,34 @@ unsupported claims is worse than no list:
    cause helps nobody and cannot be rechecked.
 3. Every measurement **requires** the kernel and sound-server versions it was
    taken on, because a figure without a software context is not reproducible.
+   Required fields must be **non-blank strings**: `kernel = ""` and
+   `kernel = 6` are both rejected.
 4. `vendor` plus `model` must be unique.
-5. No measurement may claim a `status` the entry does not have.
+5. A measurement must **not** carry a `status` field. Status is a property of
+   the device, and a measurement restating it can only ever contradict it.
+6. **Unknown fields are rejected**, at every level. A misspelled
+   `round_trip_ms` would otherwise drop the headline figure silently, which is
+   the same false-pass failure these rules exist to prevent.
+7. **A date must be a real date.** The template's `YYYY-MM-DD` placeholder is
+   rejected explicitly, so an unfilled template cannot be published as a tested
+   device.
+
+### Wrong types are errors, not skipped checks
+
+A value of the wrong TOML type **fails**; it is never passed over. This is worth
+stating because the obvious implementation does the opposite: guarding each
+numeric check with a type test means `period_frames = "fast"` skips the check
+and validates clean. An earlier version of this validator had exactly that bug.
+
+A malformed entry also must not crash the run — a list where a string belongs is
+reported, not raised — because the validator collects every problem in one pass
+and a traceback would discard the entries already checked.
+
+### Requirements
+
+Python **3.11 or newer**, for `tomllib`. The tool checks the version and exits
+with an actionable message rather than an `ImportError`; note that Ubuntu 22.04
+LTS still ships 3.10 as `python3`.
 
 ## Fields
 

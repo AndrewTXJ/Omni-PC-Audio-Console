@@ -90,4 +90,9 @@ python3 tools/check_links.py
 
 Both use only the Python standard library, so the tooling does not prejudge the
 engine language ([ADR-0003](docs/decisions/0003-engine-language-and-ui-stack.md)).
-CI runs the same two commands.
+They need Python 3.11 or newer, for `tomllib`.
+
+CI runs those two commands plus one more check that has no local equivalent: a
+shell step that fails the build if a licence file exists while ADR-0002 is still
+`Open`, or if that record is no longer `Open` and no licence file exists. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md).

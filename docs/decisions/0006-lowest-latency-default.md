@@ -63,8 +63,9 @@ What would settle it:
 
 ## Consequences
 
-- Either goal-based option keeps 4.6's promise that this is *one* control in the
-  Simple view. Any option that adds a second latency control fails the
-  admission rule of 2.1.
+- The goal-based option ("let the first-run goal decide") keeps 4.6's promise
+  that this is *one* control in the Simple view, and so does "offer it,
+  measured", which adds a setup step rather than a control. Any option that adds
+  a second latency control fails the admission rule of 2.1.
 - Whatever the default, 4.6 requires the measured round trip to be displayed, so
   a user on Balanced can always see what they are getting.

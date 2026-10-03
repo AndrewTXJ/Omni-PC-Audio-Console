@@ -56,8 +56,9 @@ whatever the engine is written in. No choice here avoids that.
 
 ## Decision
 
-**Not yet made,** at the user's direction. No engine code is written and the
-repository holds no build system, so nothing yet presumes an answer.
+**Not yet made,** deliberately deferred by the project owner rather than left
+undecided by oversight. No engine code is written and the repository holds no
+build system, so nothing yet presumes an answer.
 
 What would settle it:
 

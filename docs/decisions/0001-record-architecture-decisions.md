@@ -6,8 +6,8 @@
 
 ## Context
 
-The roadmap carries six decisions it deliberately leaves open, and four of them
-gate M0's exit. Several more will arise during M1 to M5 — the backend
+The roadmap carries six decisions it deliberately leaves open, and two of them
+— the licence, and the engine language and UI stack — gate M0's exit. Several more will arise during M1 to M5 — the backend
 abstraction, the control protocol's shape, the session file format. A roadmap
 is the wrong place to hold them: it describes the destination, is edited in
 place, and loses the reasoning behind a choice as soon as the text changes.

@@ -59,8 +59,18 @@ What would settle it:
 3. Verify the claim that mainline RT landed in 6.12, and establish what the
    `doctor` tool should recommend on kernels without it.
 
-Until then, AppImage is the distribution-independent escape hatch (4.12), which
-keeps this decision from blocking users even while it is open.
+AppImage (4.12) is sometimes offered as the escape hatch here, but it is not
+one for this decision: all three floors are host-side. PipeWire and WirePlumber
+are daemons the console talks to, with the configuration format living in the
+user's own system, and the kernel is the kernel. Bundling the application
+changes none of them. AppImage removes the *packaging* dependency on a
+distribution; it does not remove the *runtime* dependency on that
+distribution's sound server and kernel.
+
+So this decision does block some users while it stays open, and saying otherwise
+would be the kind of comfortable claim the `doctor` tool exists to replace. What
+limits the damage is diagnosis, not packaging: `doctor` can state plainly which
+floor a given system misses and what degrades.
 
 ## Consequences
 
