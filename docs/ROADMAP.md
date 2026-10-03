@@ -88,7 +88,7 @@ Layouts are views of the same session, and switching never touches the audio.
 
 ### 2.5 First run [S]
 1. **Pick where you listen and your mic.** Each device shows a test tone button and a live meter.
-2. **Pick a goal:** Everyday, Gaming and chat, Streaming, Podcast, or Music and studio. A template sets up the strips, buses and buttons.
+2. **Pick a goal:** Everyday, Gaming and chat, Streaming, Podcast with remote guest, or Music and home studio. A template sets up the strips, buses and buttons. These are five of the seven templates in 4.10, named identically; the remaining two, Live event and AV and Conferencing, are picked from the template cookbook afterwards, so first run stays short.
 3. **Make the console the system default** with one click. A visible *Restore normal audio* button undoes it.
 4. **Test.** Tone to each output, speak into the mic and watch the meter, play a sound from any app and watch its strip move.
 
@@ -155,14 +155,14 @@ This map follows Voicemeeter's public documentation. Verify the details before u
 
 ### 4.3 Strips and buses: the A/B model [P0 · S]
 - **Strip (S):** device picker, Gain knob (±24 dB), Pan, fader (-inf to +12 dB, 0 dB = unity), A and B buttons, MONO, SOLO, MUTE, and a meter with a latched clip LED.
-- **Bus (S):** device picker, fader, MUTE, MONO, meter.
+- **Bus (S):** device picker, Gain, fader, MUTE, MONO, meter.
 - **Expert (E):** send level and pre/post tap per A/B button, polarity, input delay (0 to 2000 ms) for lip-sync, selectable pan law, solo mode (PFL, AFL or solo in place), output delay for alignment, and the Patch window.
 - **Safety limiter** last in every bus [P0].
 - Full ranges are in section 7.2.
 
 ### 4.4 PC integration on Linux [P0 · S]
 - **Default device.** One switch makes the console the system default output and input, and restores the previous defaults on quit. Device priority is raised so the desktop does not steal the default back. Works with PipeWire (WirePlumber) and PulseAudio.
-- **Apps panel.** Lists apps that are playing or recording. A dropdown per app picks its strip (playback) or bus (recording), and per-app volume sits on the same row. Rules are saved by application name, so routing is applied automatically at the next launch. Streams are re-targeted through the sound server (PipeWire metadata, or `move-sink-input` on Pulse).
+- **Apps panel.** Lists apps that are playing or recording. A dropdown per app picks its strip (playback) or bus (recording), and per-app volume sits on the same row. Rules are saved by application name, so routing is applied automatically at the next launch. Streams are re-targeted through the sound server: PipeWire target metadata covers both directions, while Pulse needs `move-sink-input` for playback streams and `move-source-output` for recording streams.
 - **Startup.** Autostart at login, start minimized, restore the last profile, and keep outputs muted until the engine is stable.
 - **Tray and mini mixer.** KDE works through StatusNotifier. GNOME needs the AppIndicator extension, so a compact always-on-top mini mixer is the fallback.
 - **Resilience.** Recovery after sleep and resume, monitor sleep, USB power events, and PipeWire or session-manager restarts.
@@ -248,6 +248,8 @@ The aim is that every USB and Thunderbolt interface that Linux exposes as an aud
 | Music and home studio | Interface inputs, DAW or player | A1 monitors, A2 headphone cue | Lowest latency; hardware direct monitoring |
 | Live event and AV | Playback laptop, mics, remote feeds | A1 main, A2 to A4 zones | Output delay per zone, safety limiter, talkback (Console view), OSC or web remote |
 | Conferencing | Mic, headset, app audio | A1 headset, B1 call send | Mic cleanup (Phase 2), call recording |
+
+The first five are offered as goals in the first-run wizard (2.5), under these same names. Live event and AV and Conferencing are picked from the cookbook after first run.
 
 ### 4.11 UI and diagnostics [P0 · S]
 - One window with a fixed, predictable layout. Click a device name to change it. Strips can be renamed, recoloured and reordered.
@@ -476,7 +478,7 @@ All level changes use 10 to 20 ms smoothing, mutes ramp over 5 to 10 ms and patc
 - **Latency compensation:** every processor reports its latency and the engine delays parallel paths so buses sum phase-aligned. The per-bus policy is *Align* (full compensation, for stream and record buses) or *Live* (no compensation, high-latency inserts bypassed or flagged, for monitor buses). This is the *Low-latency monitoring* toggle in the Simple view.
 
 ### 7.6 Clocking, resampling and bit depth
-- **Project sample rate** is fixed per session (44.1, 48, 88.2, 96 or 192 kHz). The master clock is the primary hardware interface or the PipeWire graph clock.
+- **Project sample rate** is fixed per session (44.1, 48, 88.2, 96, 176.4 or 192 kHz — both families' 2x and 4x rates, matching the 44.1 to 192 kHz range 4.8 negotiates). The master clock is the primary hardware interface or the PipeWire graph clock.
 - **Clock badges:** every endpoint shows *master*, *shared clock* or *ASRC*, plus its measured drift in ppm.
 - **Asynchronous resampling:** a high-quality polyphase or sinc design with a slow PI-controlled ratio, so there is no audible pitch wobble. Evaluate libsoxr's variable-rate mode before writing an in-house converter. Target THD+N of -120 dB or better, with a low-latency (short filter) option whose cost is shown.
 - **Apps that want a different rate** are converted at the virtual-device boundary with no engine restart. A deliberate project rate change mutes, switches and fades back in.

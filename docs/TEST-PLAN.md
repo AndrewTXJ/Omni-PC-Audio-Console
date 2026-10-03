@@ -183,7 +183,7 @@ only the first can fail the engine.
 drift test with two interfaces.
 
 - **Part A, offline.** Resample a swept sine and a multitone between each
-  supported rate pair (44.1, 48, 88.2, 96, 192 kHz). Measure THD+N, and measure
+  supported rate pair (44.1, 48, 88.2, 96, 176.4, 192 kHz). Measure THD+N, and measure
   spurious images separately — an image at −115 dB is a different defect from
   broadband noise and the single THD+N figure can hide it.
 - **Part B, rig.** Two interfaces on independent clocks, 24 hours, with a steady

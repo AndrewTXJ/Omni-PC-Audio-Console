@@ -65,7 +65,7 @@ LTS still ships 3.10 as `python3`.
 | `driver` | no | string | Kernel driver, e.g. `snd-usb-audio`, `snd-hdsp` |
 | `class_compliant` | no | bool | UAC1/UAC2 without a vendor driver (4.8) |
 | `channels_in` / `channels_out` | no | int | At the device's default mode |
-| `rates` | no | int array | Supported sample rates in Hz |
+| `rates` | no | int array | Sample rates the **device** offers, in Hz. Validated against real audio rates, so a typo like `4800` fails. Rates outside the project ladder (roadmap 7.6) only warn: what the hardware offers and what a session runs at are different claims |
 | `formats` | no | string array | `S16_LE`, `S24_3LE`, `S24_LE`, `S32_LE` (4.8) |
 | `reason` | if unsupported | string | Why it does not work, and whether an application could fix it |
 | `workaround` | no | string | E.g. a class-compliant mode on the hardware (4.8) |

@@ -31,10 +31,17 @@ Compact covers it with nothing to spare; Standard covers it with room left.
   strips at first run, which reads as clutter and works against the two-minute
   goal.
 - **Let the first-run goal decide.** 2.5 already asks the user to pick
-  Everyday, Gaming and chat, Streaming, Podcast, or Music and studio, and 4.10
-  defines what each template needs. Everyday needs 3 strips and 2 buses;
-  Streaming needs 5 strips and 3 buses. The template therefore implies a
-  layout, and no global default is needed.
+  Everyday, Gaming and chat, Streaming, Podcast with remote guest, or Music and
+  home studio, and 4.10 defines what each template needs. Everyday needs 3
+  strips and 2 buses; Streaming needs 5 strips and 3 buses. The template
+  therefore implies a layout, and no global default is needed.
+
+  Note the gap: 4.10 has seven templates and the wizard offers five, so Live
+  event and AV and Conferencing arrive from the cookbook with no goal behind
+  them. That is not fatal — a template implies its layout whenever it is
+  applied, wizard or not — but it does mean "the goal decides" is shorthand for
+  "the template decides", and a user who starts from the cookbook never passes
+  through the goal step at all.
 
 ## Decision
 

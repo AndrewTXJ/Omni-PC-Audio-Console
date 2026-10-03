@@ -36,7 +36,7 @@ select it automatically.
   the auto-tuner (4.6) already finds the lowest stable setting within it. Risks:
   users who bought an interface for latency may conclude the console is slow
   and never find Lowest.
-- **Let the first-run goal decide.** "Music and studio" already implies lowest
+- **Let the first-run goal decide.** "Music and home studio" already implies lowest
   latency and hardware direct monitoring (4.10); "Everyday" does not. This ties
   the setting to stated intent rather than to inferred hardware class.
 - **Offer it, measured.** Default to Balanced, then have the auto-tuner measure

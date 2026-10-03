@@ -52,11 +52,19 @@ BACKENDS = {
 SETTINGS = {"lowest", "balanced", "safe"}
 FORMATS = {"S16_LE", "S24_3LE", "S24_LE", "S32_LE"}
 
-# Roadmap 7.6 fixes the project sample rates. Kept identical to the roadmap on
-# purpose: 176.4 kHz is absent there, which may be an oversight (it is the 4x
-# rate of the 44.1 family, and 88.2 and 192 are both present), but that is the
-# roadmap's call to make, not this tool's. Out-of-set rates warn, never fail.
-RATES = {44100, 48000, 88200, 96000, 192000}
+# Two different things, deliberately kept apart.
+#
+# PROJECT_RATES is what roadmap 7.6 fixes: the rates a session can RUN at.
+# A device's `rates` field is a different claim -- what the hardware OFFERS --
+# and checking one against the other is a category error: a card supporting
+# 32 kHz is not a data problem just because no session renders at 32 kHz.
+# So device rates are checked for plausibility against real audio rates, and
+# only noted (never failed) when the project cannot render at them.
+PROJECT_RATES = {44100, 48000, 88200, 96000, 176400, 192000}
+KNOWN_AUDIO_RATES = {
+    8000, 11025, 16000, 22050, 32000, 37800, 44056, 44100, 47250, 48000,
+    64000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000,
+}
 
 REQUIRED_DEVICE = ("vendor", "model", "connection", "status")
 REQUIRED_TESTED = ("date", "kernel", "sound_server")
@@ -372,11 +380,20 @@ def check_device(report: Report, index: int, d: object) -> tuple[str, str] | Non
                     report.error(
                         where, f"rates[{i}] must be an integer, got {type_name(r)}"
                     )
-                elif r not in RATES:
+                elif r not in KNOWN_AUDIO_RATES:
+                    # Implausible as a hardware rate at all -- most likely a typo
+                    # such as 4800 for 48000, which would otherwise be published.
+                    report.error(
+                        where,
+                        f"rates[{i}] = {r} is not a known audio sample rate; "
+                        "check for a typo",
+                    )
+                elif r not in PROJECT_RATES:
                     report.warn(
                         where,
-                        f"rate {r} is outside the project rates {sorted(RATES)} "
-                        "(roadmap 7.6) — intentional?",
+                        f"the device offers {r} Hz, which is outside the project "
+                        f"rates {sorted(PROJECT_RATES)} (roadmap 7.6) — fine to "
+                        "record, but no session will run at it",
                     )
 
     if "formats" in d:
