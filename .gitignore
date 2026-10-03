@@ -1,0 +1,20 @@
+# Editors and OS
+*.swp
+*~
+.DS_Store
+.idea/
+.vscode/
+
+# Python tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Test and measurement output. Captures are large and are published as figures
+# in data/compatibility/, not as raw files in the repository.
+/results/
+/captures/
+*.wav
+*.flac
+*.raw

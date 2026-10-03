@@ -1,0 +1,37 @@
+# Template for a new compatibility entry. Copy into devices.toml and fill in.
+# See SCHEMA.md for every field and the integrity rules the validator enforces.
+
+[[device]]
+vendor = ""
+model = ""
+connection = "usb2"          # usb2 | usb3 | thunderbolt | pcie | firewire | bluetooth | onboard
+status = "untested"          # supported | partial | unsupported | untested
+driver = "snd-usb-audio"
+class_compliant = true
+channels_in = 2
+channels_out = 2
+rates = [44100, 48000, 88200, 96000]
+formats = ["S24_3LE", "S32_LE"]
+quirks = []
+alsa_controls = []
+notes = ""
+sources = []
+
+# Required once status is "supported".
+[device.tested]
+date = "YYYY-MM-DD"
+kernel = ""
+sound_server = ""
+distro = ""
+tester = ""
+
+# At least one required once status is "supported". One per backend and setting.
+[[device.measurement]]
+backend = "alsa"             # see SCHEMA.md for the full list
+setting = "lowest"           # lowest | balanced | safe
+period_frames = 0
+round_trip_ms = 0.0
+engine_added_periods = 0
+kernel = ""
+sound_server = ""
+notes = ""

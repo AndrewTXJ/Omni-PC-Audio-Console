@@ -1,0 +1,72 @@
+# Device compatibility database (roadmap 4.8, section 8).
+#
+# Validated by tools/validate_compatibility.py. See SCHEMA.md.
+#
+# SEEDING NOTE. This file starts almost empty on purpose. No entry here claims a
+# measured figure, because nothing has been measured yet — the engine does not
+# exist. The entries below record only the "honest limits" the roadmap already
+# states in 4.8, so the list begins with what is known rather than with
+# placeholders. Every one is marked for independent verification.
+#
+# Do not add a measurement that did not come from docs/TEST-PLAN.md.
+
+# --- Known unsupported: no Linux driver (roadmap 4.8) ----------------------
+
+[[device]]
+vendor = "Apogee"
+model = "Thunderbolt interfaces (family)"
+connection = "thunderbolt"
+status = "unsupported"
+class_compliant = false
+reason = """
+No Linux driver. The kernel exposes no ALSA device for these units, so there is \
+nothing for an application to drive. This cannot be fixed by this project.\
+"""
+workaround = """
+Check whether the specific model offers a class-compliant USB mode; where one \
+exists it works through snd-usb-audio. Verify per model — this is not uniform \
+across the family.\
+"""
+notes = """
+Recorded as a family rather than a model because the roadmap states it that \
+way. Split into per-model entries once individual units are confirmed.\
+"""
+sources = ["roadmap 4.8 (honest limit) — needs independent verification"]
+
+[[device]]
+vendor = "Universal Audio"
+model = "Apollo (family)"
+connection = "thunderbolt"
+status = "unsupported"
+class_compliant = false
+reason = """
+No Linux driver. The unit's DSP and routing depend on vendor software that does \
+not exist for Linux. This cannot be fixed by this project.\
+"""
+workaround = """
+Verify whether the specific model has a class-compliant mode. Some Apollo units \
+offer limited standalone or class-compliant operation and some do not; do not \
+assume a mode exists until confirmed on the model in hand.\
+"""
+sources = ["roadmap 4.8 (honest limit) — needs independent verification"]
+
+# --- Awaiting measurement --------------------------------------------------
+
+[[device]]
+vendor = "Focusrite"
+model = "Scarlett (scarlett2-supported models)"
+connection = "usb2"
+status = "untested"
+driver = "snd-usb-audio"
+class_compliant = true
+alsa_controls = [
+  "see scarlett2 — exposed controls vary by model and firmware",
+]
+notes = """
+The roadmap singles out the scarlett2 driver as the route to interface controls \
+(phantom power, pad, instrument, input gain) on supported Focusrite models, so \
+this family is a priority for the rig. Which models and which controls is \
+model- and firmware-dependent and must be recorded per unit, not per family. \
+Split into per-model entries as each is measured.\
+"""
+sources = ["roadmap 4.8 (interface controls) — no measurement taken yet"]

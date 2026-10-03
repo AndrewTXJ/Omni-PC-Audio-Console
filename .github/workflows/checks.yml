@@ -1,0 +1,55 @@
+name: checks
+
+# The repository holds no compiled code yet, so these checks validate data and
+# documentation only. Engine build, test and null-test jobs join at M1, once
+# ADR-0003 settles the engine language.
+#
+# Deliberately language-agnostic: the tools use the Python standard library, so
+# nothing here prejudges that decision.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  data-and-docs:
+    name: Data and documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # 3.11 or newer: tomllib is used from the standard library.
+          python-version: "3.11"
+
+      - name: Validate the compatibility database
+        run: python3 tools/validate_compatibility.py
+
+      - name: Check relative links in Markdown
+        run: python3 tools/check_links.py
+
+      - name: Confirm no LICENSE is claimed while ADR-0002 is open
+        # The licence is an open decision. A LICENSE file appearing without that
+        # record being updated would mean the repository states terms its own
+        # decision log says are unsettled.
+        run: |
+          set -euo pipefail
+          status=$(grep -m1 '^- \*\*Status:\*\*' docs/decisions/0002-licence.md)
+          echo "ADR-0002 ${status}"
+          if ls LICENSE* COPYING* >/dev/null 2>&1; then
+            if echo "${status}" | grep -q 'Open'; then
+              echo "::error::A licence file exists but ADR-0002 is still marked Open." >&2
+              echo "Update docs/decisions/0002-licence.md in the same change." >&2
+              exit 1
+            fi
+          elif ! echo "${status}" | grep -q 'Open'; then
+            echo "::error::ADR-0002 is no longer Open but no licence file exists." >&2
+            exit 1
+          fi
