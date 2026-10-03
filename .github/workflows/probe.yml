@@ -1,0 +1,33 @@
+# DIAGNOSTIC, meant to be deleted.
+#
+# Every job in checks.yml fails in 2-5 s with runner_id 0, no steps recorded and
+# no logs. That is a startup failure, and two causes fit: an Actions
+# spending-limit/payment problem, or a policy that blocks the actions the
+# workflow uses.
+#
+# This workflow distinguishes them. It uses NO actions at all -- no
+# actions/checkout, no actions/setup-python, nothing with `uses:` -- and does no
+# real work. If it also fails to start, the cause cannot be an actions policy and
+# must be account-level. If it DOES start, the policy is the cause and checks.yml
+# can be rewritten without `uses:`.
+name: probe
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: No-actions startup probe
+    runs-on: ubuntu-latest
+    steps:
+      - name: Did a runner pick this up and execute a step?
+        run: |
+          echo "A runner was assigned and this step executed."
+          echo "runner os : $RUNNER_OS"
+          echo "sha       : $GITHUB_SHA"
+          uname -a
