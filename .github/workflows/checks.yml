@@ -9,11 +9,23 @@ name: checks
 # The Python tooling stays standard-library-only so a contributor can run it
 # without a toolchain.
 
+# `push` is restricted to the default branch on purpose. With `branches: ["**"]`
+# every push to a branch that has an open pull request fired BOTH the push and
+# the pull_request event, so each push produced two identical runs -- 5 jobs
+# twice, 10 runs and 10 notifications for one commit. A pull request still gets a
+# run from the pull_request event, and a branch without one can be run by hand
+# with workflow_dispatch.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+# Supersede rather than accumulate: a second push while the first run is still
+# going cancels it, because the older result is about to be irrelevant anyway.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

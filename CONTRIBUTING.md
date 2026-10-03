@@ -85,7 +85,12 @@ python3 tools/validate_compatibility.py   # device database integrity
 python3 tools/check_links.py              # relative links in Markdown
 ```
 
-The third is a shell step in [`.github/workflows/checks.yml`](.github/workflows/checks.yml):
+CI runs on pull requests, and on pushes to `main`. A push to a branch with no
+open pull request does not trigger it — use `workflow_dispatch` for that. This is
+deliberate: triggering on every branch push *and* on `pull_request` ran every job
+twice for one commit.
+
+The third check is a shell step in [`.github/workflows/checks.yml`](.github/workflows/checks.yml):
 it fails the build if a licence file exists while
 [ADR-0002](docs/decisions/0002-licence.md) is still marked `Open`, or if the
 record is no longer `Open` and no licence file exists. It can fail a pull
