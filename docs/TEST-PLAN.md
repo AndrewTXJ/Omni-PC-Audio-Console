@@ -107,6 +107,34 @@ falsifiable. If it fails, every other transparency claim is void.
   the configurations that pass this test, and false otherwise. An indicator
   that lies is worse than no indicator.
 
+**A conflict in the roadmap, resolved.** 4.1 asks for "denormal protection on
+every processor output"; this row asks the untouched path to be bit-exact. Both
+cannot hold literally — flushing a denormal input sample changes it, so a null
+test fed a denormal fails. The engine resolves it as follows, and
+`engine/include/omni/dsp/guards.hpp` carries the same note:
+
+- Non-finite values (NaN, Inf) are replaced with silence at every bus output.
+  For valid audio that is the identity, so it costs nothing in exactness, and it
+  is what stops one NaN from a plugin (5.2) poisoning a whole mix.
+- Denormals are **not** flushed on the signal path. They matter where they are
+  generated and persist — recursive filter state, reverb tails — because that is
+  where they stall a CPU. A denormal passing through a gain stage is −700 dBFS
+  and harmless. Flushing globally via MXCSR (FTZ/DAZ) is rejected for the same
+  reason: it would break this row for the entire process.
+
+QS-01 therefore includes denormal and signed-zero vectors, and asserts they pass
+through unchanged. One known behaviour it records rather than hides: `-0.0f`
+accumulated onto a zeroed bus yields `+0.0f`, because IEEE 754 says so. The
+value is still zero, so the null difference is zero and the target holds, but
+the *sign* of zero is not preserved through a sum.
+
+**Settled state matters.** A path whose ramps have not settled is a fade-in, not
+a null. The engine exposes `Graph::snap()` for initial state — loading a session,
+or an offline render — and the renderer calls it before frame 0. A live profile
+recall must not: 4.9 requires those to ramp. This was found by the end-to-end
+renderer check after every library-level test had hidden it by pre-rolling, which
+is the argument for having both.
+
 ### QS-02 Engine-added latency
 
 **Target.** 0 extra periods, measured against a raw ALSA loopback baseline.
@@ -496,6 +524,28 @@ Measurements follow AES17-style methods where applicable, using open tools
 
 The offline harness should emit machine-readable results so CI can gate on them
 and so figures reach the compatibility database without being retyped.
+
+## Current coverage
+
+What actually runs today, as of M1 (engine core and offline renderer). The
+harness column above says what a test *can* be; this says what exists:
+
+| Test | State at M1 |
+|---|---|
+| QS-01 | **Runs.** Bit-exact null through the library and through `omni-render`, at 16, 24 and 32 bit and float, including denormals and signed zero |
+| QS-05 | **Runs.** Gain within 0.01 dB across trim and fader; all four pan laws within 0.05 dB; centred balance and 0 dB exact |
+| QS-04 | **Partly.** The send-matrix subset: unrouted, silent-source, muted and −inf-fader buses are all exactly zero. The many-to-one and one-to-many *patches* need the Patch window (M3) |
+| QS-07 | **Partly.** Mute, fader and send toggles, including a reversal mid-ramp. Patch changes need M3 and profile switches M5 |
+| QS-02, QS-03B, QS-06B, QS-08 to QS-10 | Not yet — all need the audio backends (M2) or the rig |
+| QS-11 to QS-19 | Phase 2 and 3 |
+
+The engine's own units — saturating conversion, the safety limiter, metering,
+the delay line and WAV round-tripping — are covered separately.
+
+The suite is checked against deliberately broken builds rather than only against
+a working one: breaking unity gain to `0.99999994f`, leaking `1e-30f` into a
+zeroed bus, and advancing a mute ramp twice per frame are each caught. The last
+is caught *only* by QS-07, which is why that partial test is worth having now.
 
 ## Open questions
 

@@ -20,17 +20,19 @@ reasoning behind a past choice stays readable.
 |---|---|---|---|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions | Accepted | — |
 | [0002](0002-licence.md) | Project licence | **Open** | M0 exit; dependency and SDK choices |
-| [0003](0003-engine-language-and-ui-stack.md) | Engine language and UI stack | **Open** | M0 exit; all of M1 |
+| [0003](0003-engine-language-and-ui-stack.md) | Engine language and UI stack | Accepted — C++20 + Qt 6/QML | — |
 | [0004](0004-default-layout.md) | Default layout for new users | **Open** | M3 (Simple view v1) |
 | [0005](0005-windows-virtual-device-count.md) | Windows virtual device count | **Open** | M12; research starts in Phase 2 |
 | [0006](0006-lowest-latency-default.md) | Whether Lowest is the default for pro interfaces | **Open** | M5 (first-run wizard defaults) |
 | [0007](0007-support-baseline.md) | Support baseline: PipeWire, kernel, distributions | **Open** | The CI and test matrix |
 
-The six records marked **Open** are the six open decisions in roadmap
-section 11, one for one. M0's exit criteria name two of them — the licence
-(0002) and the engine language and UI stack (0003) — and M0's usability tests
-are what answer 0004. The rest should be settled early for the reasons each
-record gives, but the roadmap does not gate M0 on them.
+Roadmap section 11 lists six open decisions. **Five are still open; 0003
+(engine language and UI stack) is settled — C++20 with Qt 6/QML — which
+unblocked M1.** Of the two that M0's exit criteria name, that leaves ADR-0002
+(the licence), and the repository is public, so it is now the urgent one. M0's
+usability tests are what answer 0004. The remaining three should be settled
+early for the reasons each record gives, but the roadmap does not gate M0 on
+them.
 
 ## Template
 

@@ -1,6 +1,6 @@
 # ADR-0003: Engine language and UI stack
 
-- **Status:** Open
+- **Status:** Accepted
 - **Date:** 2026-10-03
 - **Roadmap:** section 11 decision 2; section 8 (technology choices); 4.1, 4.6
 
@@ -56,36 +56,57 @@ whatever the engine is written in. No choice here avoids that.
 
 ## Decision
 
-**Not yet made,** deliberately deferred by the project owner rather than left
-undecided by oversight. No engine code is written and the repository holds no
-build system, so nothing yet presumes an answer.
+**C++20 for the engine, Qt 6/QML for the UI.** Chosen by the project owner.
 
-What would settle it:
+What supports it:
 
-1. **Prototype the hot path in both.** M2's measurable target — the engine adds
-   **0 extra periods** over a raw ALSA loopback baseline (7.7) — is the only
-   test that matters, and it is cheap to run twice before the codebase exists.
-   Use the same ALSA mmap callback and the same mixing loop in each.
-2. **Check SIMD and plugin-hosting ergonomics** against 4.6's zero-copy,
-   in-place mixing requirement and 5.2's LV2-then-CLAP-then-VST3 order.
-3. **Count the team.** For one to three engineers (section 9), familiarity may
-   outweigh every property above. An engine written fluently in the second-best
-   language beats one written haltingly in the best.
-4. **For the UI, test a 64-channel meter bridge** in both at 60 Hz and measure
-   the CPU cost against 7.7's budget of under 25% of one core for 64 channels.
+- Every plugin API the roadmap wants to host — LV2, then CLAP, then VST3 (5.2)
+  — is a C or C++ interface, and VST3 is the Windows priority (6.3).
+- The Phase 3 Windows virtual audio driver (6.2) is kernel-mode C/C++ whatever
+  the engine is written in. This keeps the project in one language instead of
+  two across the same codebase.
+- Qt 6/QML draws many faders and meters at 60 Hz without strain, and brings
+  accessibility (a section 8 requirement) rather than needing it rebuilt.
 
-The tooling in this repository is deliberately neutral: `tools/` is Python
-using only the standard library, and CI runs no compiler. Neither choice is
-prejudged.
+**The accepted cost, stated plainly:** no compile-time protection against the
+data races and lifetime bugs that cause intermittent xruns — the failure mode
+that is hardest to reproduce in CI and therefore hardest to fix. Choosing this
+language means the protection has to come from the build and the tests:
+
+- `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion`
+  `-Wold-style-cast -Wnon-virtual-dtor -Wdouble-promotion -Werror` on every
+  target. This is not ceremony: it caught two real double-promotion defects on
+  the very first build.
+- `-fno-fast-math -ffp-contract=off`, because `-ffast-math` permits
+  reassociation and would silently invalidate every exactness claim in 7.7.
+- The offline renderer and the null tests run on every commit, so the
+  arithmetic is checked continuously rather than at milestone boundaries.
+- **Owed at M2, when a real audio thread exists:** the lock-free parameter
+  queue 4.6 requires, ThreadSanitizer in CI, and an assertion that nothing
+  allocates on the audio thread. These are what a borrow checker would have
+  given for nothing, so skipping them is not available.
+
+**What was not done.** The prototype-both-languages experiment this record
+previously prescribed was not run; the decision was made on the grounds above
+instead, accepting two prototypes' worth of delay as the thing being avoided.
+The number that experiment would have produced — M2's "0 extra periods" against
+a raw ALSA loopback baseline (QS-02) — still has to be met, and a failure to
+meet it is still what would reopen this record.
 
 ## Consequences
 
-- M1 cannot start until this is decided. It and ADR-0002 are the two decisions
-  M0's exit criteria name explicitly, and this is the one that blocks code.
+- M1 is unblocked and underway: the engine core, the offline renderer and the
+  null tests are in `engine/`, `offline/` and `tests/`.
+- ADR-0002 (licence) is now the only open decision M0's exit criteria name, and
+  the repository is public, so it is the more urgent of the two.
 - Whatever is chosen, 4.1's split stands: a headless daemon with the UI, tray,
   hotkeys, CLI and web remote as clients of one versioned control API. That
   split is what keeps this decision reversible for the UI and contained for the
   engine.
-- The offline renderer (4.1, M1) must be part of the prototype in either
-  language — it is what makes the quality specs testable in CI without
-  hardware, and retrofitting it is much harder than building it in.
+- The offline renderer (4.1, M1) was built first, not retrofitted, which is
+  what makes the quality specifications testable in CI without hardware. It has
+  already earned that: it caught a fade-in on the first rendered frame that
+  every library-level test had hidden by pre-rolling.
+- Qt 6 is not yet a build dependency. The engine and the renderer need neither
+  Qt nor ALSA, so M1 builds and tests on any machine with a C++20 compiler;
+  Qt enters at M3 with the Simple view.
