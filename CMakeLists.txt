@@ -33,8 +33,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     -fno-fast-math -ffp-contract=off)
 endif()
 
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 add_subdirectory(engine)
 add_subdirectory(offline)
+add_subdirectory(bench)
+if(OMNI_HAVE_ALSA)
+  add_subdirectory(mixer)
+endif()
 
 include(CTest)
 if(BUILD_TESTING)

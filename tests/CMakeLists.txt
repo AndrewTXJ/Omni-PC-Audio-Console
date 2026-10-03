@@ -6,11 +6,12 @@ set(OMNI_TESTS
   test_qs04_isolation
   test_qs07_ramps
   test_dsp_units
+  test_command_queue
 )
 
 foreach(t IN LISTS OMNI_TESTS)
   add_executable(${t} ${t}.cpp)
-  target_link_libraries(${t} PRIVATE omni_engine omni_warnings omni_strict_fp)
+  target_link_libraries(${t} PRIVATE omni_engine omni_warnings omni_strict_fp Threads::Threads)
   target_include_directories(${t} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
   add_test(NAME ${t} COMMAND ${t})
   set_tests_properties(${t} PROPERTIES

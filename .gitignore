@@ -1,3 +1,6 @@
+# Demo and render output
+/demo-out/
+
 # Build output
 /build/
 /build-*/
