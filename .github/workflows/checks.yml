@@ -1,22 +1,116 @@
 name: checks
 
-# The repository holds no compiled code yet, so these checks validate data and
-# documentation only. Engine build, test and null-test jobs join at M1, once
-# ADR-0003 settles the engine language.
+# Two jobs: the engine (C++20, ADR-0003) and the data/documentation checks.
 #
-# Deliberately language-agnostic: the tools use the Python standard library, so
-# nothing here prejudges that decision.
+# The engine job needs no Qt and no ALSA -- M1 is the engine core and the offline
+# renderer, which is precisely what makes the quality specifications testable in
+# CI without a sound card (roadmap 4.1). Qt enters at M3.
+#
+# The Python tooling stays standard-library-only so a contributor can run it
+# without a toolchain.
 
+# `push` is restricted to the default branch on purpose. With `branches: ["**"]`
+# every push to a branch that has an open pull request fired BOTH the push and
+# the pull_request event, so each push produced two identical runs -- 5 jobs
+# twice, 10 runs and 10 notifications for one commit. A pull request still gets a
+# run from the pull_request event, and a branch without one can be run by hand
+# with workflow_dispatch.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+# Supersede rather than accumulate: a second push while the first run is still
+# going cancels it, because the older result is about to be irrelevant anyway.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  engine:
+    name: Engine build and null tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+        build_type: [Debug, RelWithDebInfo]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build libasound2-dev
+
+      - name: Configure
+        env:
+          CXX: ${{ matrix.compiler }}
+        run: >-
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DOMNI_WERROR=ON
+
+      - name: Build
+        run: cmake --build build
+
+      # The null tests (QS-01, QS-04) assert EXACT equality, so they are the
+      # reason -ffast-math is forbidden in CMakeLists.txt. A pass here means the
+      # unity path is bit-exact on this compiler and optimisation level, which is
+      # a claim worth re-checking per configuration rather than once.
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      # The live backend against ALSA's userspace `null` PCM. This needs no
+      # sound card and proves open/configure/transfer/recover and that the audio
+      # thread neither crashes nor deadlocks. It does NOT verify timing: `null`
+      # does not block, so the loop runs far faster than real time.
+      - name: Live mixer smoke test (null PCM, no sound card)
+        run: ./build/mixer/omni-mixer --out null --rate 48000 --period 64 --seconds 2
+
+      # QS-09: worst-case CPU per block against the period deadline. Measured on
+      # thread CPU time, so a shared runner descheduling the process does not
+      # read as engine cost. Exits non-zero if the worst case passes 25%.
+      - name: CPU budget (QS-09)
+        run: ./build/bench/omni-bench --blocks 4000
+
+      - name: Audible demo renders and self-verifies
+        run: ./scripts/demo.sh
+
+      - name: Offline renderer smoke test
+        run: |
+          set -euo pipefail
+          ./build/offline/omni-render --help >/dev/null
+          python3 - <<'EOF'
+          import math, struct, wave
+          with wave.open('ci-tone.wav', 'wb') as w:
+              w.setnchannels(2); w.setsampwidth(2); w.setframerate(48000)
+              frames = bytearray()
+              for i in range(4800):
+                  v = int(round(0.25 * math.sin(2 * math.pi * 1000 * i / 48000) * 32767))
+                  frames += struct.pack('<hh', v, v)
+              w.writeframes(bytes(frames))
+          EOF
+          ./build/offline/omni-render --strip ci-tone.wav --route 0:0             --bus 0:ci-out.wav:f32 --verbose
+          python3 - <<'EOF'
+          import struct, wave
+          with wave.open('ci-tone.wav') as w:
+              n = w.getnframes()
+              src = [v / 32768.0 for v in struct.unpack(f'<{n*2}h', w.readframes(n))]
+          raw = open('ci-out.wav', 'rb').read()
+          i = raw.find(b'data')
+          out = struct.unpack(f'<{(len(raw)-i-8)//4}f', raw[i+8:])
+          bad = sum(1 for a, b in zip(src, out) if a != b)
+          assert len(src) == len(out), (len(src), len(out))
+          assert bad == 0, f'renderer unity path not bit-exact: {bad} samples differ'
+          print(f'offline renderer: {len(src)} samples, bit-exact')
+          EOF
+
   data-and-docs:
     name: Data and documentation
     runs-on: ubuntu-latest

@@ -10,19 +10,49 @@ Windows.
 
 ## Status
 
-**Pre-M0 — planning only. There is no engine code yet, and nothing here runs
-audio.**
+**M1 complete, M2 started. There is something to run.**
 
-The plan of record is [`docs/ROADMAP.md`](docs/ROADMAP.md). What exists so far is
-the groundwork M0 calls for: the open decisions written down, the quality
-specifications turned into runnable procedures, and a device database with the
-integrity rules to keep it honest.
+| Binary | What it is | State |
+|---|---|---|
+| `omni-render` | Offline renderer: WAVs in, routed WAVs out | Works, verified bit-exact |
+| `omni-mixer` | Live terminal mixer over ALSA | Runs; real-time behaviour unverified (see below) |
+| `omni-bench` | Per-block CPU against the period deadline (QS-09) | Works |
 
-Six decisions are deliberately still open. Two are named in M0's own exit
-criteria — the **licence** and the **engine language and UI stack** — and the
-second of those blocks all of M1, which makes it the critical path. See
-[`docs/decisions/`](docs/decisions/README.md), where each record states what
-evidence would settle it.
+What works today:
+
+- A graph of strips and buses with sends, smoothing, metering and a safety
+  limiter, following the signal flow in roadmap 7.1.
+- **Any-to-any patching** with **loop protection** (4.2): a bus can feed a strip,
+  many-to-one and one-to-many both work, patch changes crossfade over 10 ms, and
+  a patch that would create a feedback loop is refused with an explanation. The
+  processing order is a **compiled schedule** (4.1) — a topological sort, because
+  a patch reads a bus's output and that makes ordering a dependency problem.
+- A **lock-free parameter queue** (4.6), so the UI can change a fader while the
+  audio thread runs, with no lock and no allocation on the audio side.
+- An **ALSA backend** that negotiates format, rate and buffering, converts with
+  the saturating converters, and recovers from xruns.
+- The null tests: the unity path is **bit-exact**, and unrouted buses and
+  channels are **exactly** silent — through the library and through the renderer.
+  QS-01, QS-04 and QS-05 now pass in full.
+
+**What is not verified, and why.** `omni-mixer` has never driven a real sound
+card. It was developed in a container with no audio hardware, where the only
+available PCM is ALSA's userspace `null` device — and `null` does not block, so
+the loop runs hundreds of times faster than real time. That exercises
+open/configure/transfer/recover, and nothing about timing. Latency, xrun
+behaviour under load and QS-02's "0 extra periods" all need hardware. What *is*
+measured without hardware is whether the engine can keep up at all:
+`omni-bench` reports worst-case CPU at **well under** QS-09's 25% of one core.
+
+The plan of record is [`docs/ROADMAP.md`](docs/ROADMAP.md).
+[`docs/TEST-PLAN.md`](docs/TEST-PLAN.md) has a table of exactly which quality
+specifications run today and which are still waiting on a milestone.
+
+The engine is **C++20 with Qt 6/QML** ([ADR-0003](docs/decisions/0003-engine-language-and-ui-stack.md)).
+Qt is not yet a dependency: the engine and renderer need neither Qt nor ALSA, so
+this builds anywhere with a C++20 compiler. Five decisions remain open, and the
+**licence** ([ADR-0002](docs/decisions/0002-licence.md)) is the one M0's exit
+criteria still name — on a public repository, which makes it the urgent one.
 
 Because [ADR-0002](docs/decisions/0002-licence.md) is unresolved there is no
 `LICENSE` file, and therefore no stated terms for contributions yet. See
@@ -59,14 +89,111 @@ than by the engine, the test plan says so.
 | Document | What it covers |
 |---|---|
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | The plan of record: phases, milestones M0–M12, pro-layer reference, quality specifications, risks, open decisions |
-| [`docs/decisions/`](docs/decisions/README.md) | Architecture decision records, including the six open decisions and what would settle each |
+| [`docs/decisions/`](docs/decisions/README.md) | Architecture decision records: five open decisions and what would settle each, plus the settled stack choice |
 | [`docs/TEST-PLAN.md`](docs/TEST-PLAN.md) | Roadmap 7.7's 19 quality specifications as runnable procedures, plus the reference rig |
 | [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) | Which interfaces work, and how to contribute a measured device |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Where help is useful now, and the scope rules |
 
+## Building
+
+Needs a C++20 compiler, CMake 3.22+ and Ninja. No Qt and no network.
+
+ALSA is **optional**: with `libasound2-dev` present you also get `omni-mixer`;
+without it the engine, the renderer, the benchmark and every test still build,
+which is what lets the quality specifications be checked on a machine with no
+sound card (roadmap 4.1).
+
+```sh
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+Warnings are errors by default (`-DOMNI_WERROR=OFF` to relax). `-ffast-math` is
+explicitly disabled and must stay that way: it permits reassociation, which would
+silently invalidate every exactness claim in roadmap 7.7.
+
+### Hearing it work, with no audio hardware
+
+```sh
+scripts/demo.sh
+```
+
+Synthesises three sources — a rhythmic game pulse, a melodic arpeggio, a
+speech-like voice — routes them through the engine, and writes two files:
+
+| File | Contents |
+|---|---|
+| `demo-out/A1-headphones.wav` | pulse + arpeggio + voice (everything) |
+| `demo-out/B1-stream.wav` | pulse + voice, **no arpeggio** |
+
+The only difference is one unticked send. That is all mix-minus is, and it is the
+same mechanism that stops a call app hearing itself. The script verifies the
+result numerically as well as audibly — it measures the music's rejection on the
+stream bus and fails if it is under 30 dB or if either bus clipped.
+
+### Running the live mixer
+
+Needs Linux with ALSA and a free output device. Build, then:
+
+```sh
+./build/mixer/omni-mixer --list                    # see devices
+./build/mixer/omni-mixer --out default             # tone generator -> output
+./build/mixer/omni-mixer --out default --in default  # add a capture strip
+```
+
+Keys: `j`/`k` select, `m` mute, `[`/`]` fader ∓1 dB, `1`/`2` toggle the A1/B1
+send, `t` tone on/off, `-`/`=` tone frequency, `p` panic mute, `c` clear clips,
+`q` quit. Meters are live.
+
+The mic strip **starts muted** and only the tone is routed, so a first run cannot
+surprise you with feedback through your own speakers (principle 4: outputs start
+muted).
+
+Two caveats worth knowing before you run it:
+
+- **A `hw:` device held by PipeWire or PulseAudio will refuse to open.** Polite
+  acquisition through `org.freedesktop.ReserveDevice1` (4.7) is not implemented,
+  so use `default` — which goes through your sound server — or stop the server
+  first.
+- **Apps cannot play into it.** Virtual devices are M3 (4.2). Bus B1 is metered
+  but goes nowhere yet, for the same reason.
+
+For a scripted check with no terminal:
+
+```sh
+./build/mixer/omni-mixer --out null --seconds 2    # no sound card needed
+./build/bench/omni-bench                           # QS-09 CPU measurement
+```
+
+### Trying the renderer
+
+The roadmap's headline job — game and music to the headphones, but only the game
+to the stream:
+
+```sh
+./build/offline/omni-render   --strip game.wav  --route 0:0 --route 0:1   --strip music.wav --route 1:0   --bus 0:headphones.wav:s24   --bus 1:stream.wav:s24 --verbose
+```
+
+`--route S:B[:dB]` is an A/B button: a send from strip S to bus B, 0 dB and
+post-fader by default. Leaving the music strip off bus 1 is all mix-minus is.
+`--help` lists the per-strip and per-bus options.
+
 ## Repository layout
 
 ```
+engine/
+  include/omni/dsp/       dB, ramps, pan laws, metering, guards, safety limiter
+  include/omni/engine/    strip, bus, graph, delay line
+  include/omni/control/   lock-free parameter queue and commands
+  include/omni/audio/     ALSA device (optional: skipped if ALSA is absent)
+  include/omni/io/        WAV reader and writer
+  src/                    implementations
+offline/                  omni-render, the offline renderer
+mixer/                    omni-mixer, the live terminal mixer
+bench/                    omni-bench, the CPU-against-deadline measurement
+scripts/demo.sh           renders an audible mix-minus demo, and verifies it
+tests/                    null tests and unit tests (no external framework)
 docs/
   ROADMAP.md              the plan of record
   TEST-PLAN.md            how each quality specification is measured
@@ -81,7 +208,7 @@ tools/
 
 ## Checks
 
-No compiled code yet, so the checks validate data and documentation:
+Alongside the C++ tests, two checks validate data and documentation:
 
 ```sh
 python3 tools/validate_compatibility.py

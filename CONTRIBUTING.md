@@ -21,10 +21,10 @@ Read [`docs/ROADMAP.md`](docs/ROADMAP.md) first; it is the plan of record. Then:
 | Add a tested device | [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md) |
 | Work on how quality is measured | [`docs/TEST-PLAN.md`](docs/TEST-PLAN.md) |
 
-The six open decisions are the critical path. M0's exit criteria name two of
-them, and [ADR-0003](docs/decisions/0003-engine-language-and-ui-stack.md) — the
-engine language and UI stack — blocks all of M1, so it is the one most worth
-closing first.
+[ADR-0003](docs/decisions/0003-engine-language-and-ui-stack.md) is settled —
+**C++20 with Qt 6/QML** — so M1 is underway. Five decisions remain open, and
+[ADR-0002](docs/decisions/0002-licence.md) (the licence) is the one M0's exit
+criteria still name, on a public repository, which makes it the urgent one.
 
 ## Decisions
 
@@ -35,14 +35,14 @@ once accepted; a changed decision gets a new record that supersedes the old one.
 If you are settling an existing open decision, update that record's status and
 the index table rather than writing a new one.
 
-**Then fix the count.** Four places outside the records state how many decisions
-are open or how many gate M0, in prose: `README.md`, this file,
-`docs/decisions/README.md`, and ADR-0003's Consequences. They are not generated,
-so settling a decision without editing them leaves the repository contradicting
-itself — which has already happened twice here. Before opening the pull request:
+**Then fix the count.** Several places outside the records state how many
+decisions are open or how many gate M0, in prose: `README.md`, this file, and
+`docs/decisions/README.md`. They are not generated, so settling a decision
+without editing them leaves the repository contradicting itself — which has
+already happened twice here. Before opening the pull request:
 
 ```sh
-grep -rn 'six open\|six decisions\|six records\|gate M0\|exit criteria name' \
+grep -rniE 'five|six|open decision|gate M0|exit criteria name' \
   README.md CONTRIBUTING.md docs/decisions/
 ```
 
@@ -85,7 +85,12 @@ python3 tools/validate_compatibility.py   # device database integrity
 python3 tools/check_links.py              # relative links in Markdown
 ```
 
-The third is a shell step in [`.github/workflows/checks.yml`](.github/workflows/checks.yml):
+CI runs on pull requests, and on pushes to `main`. A push to a branch with no
+open pull request does not trigger it — use `workflow_dispatch` for that. This is
+deliberate: triggering on every branch push *and* on `pull_request` ran every job
+twice for one commit.
+
+The third check is a shell step in [`.github/workflows/checks.yml`](.github/workflows/checks.yml):
 it fails the build if a licence file exists while
 [ADR-0002](docs/decisions/0002-licence.md) is still marked `Open`, or if the
 record is no longer `Open` and no licence file exists. It can fail a pull
