@@ -97,6 +97,17 @@ class Strip {
     [[nodiscard]] bool send_enabled(std::size_t bus) const noexcept {
         return bus < sends_.size() && sends_[bus].enabled;
     }
+
+    /// Whether the send currently carries audio, which is not the same as being
+    /// enabled: a send switched off is still fading for a few milliseconds. The
+    /// scheduler and the loop detector both need the conservative answer, because
+    /// a dependency that exists for 7 ms is still a dependency.
+    [[nodiscard]] bool send_active(std::size_t bus) const noexcept {
+        if (bus >= sends_.size()) return false;
+        const Send& s = sends_[bus];
+        if (s.enabled) return true;
+        return !(s.gain.is_static() && s.gain.value() == 0.0f);
+    }
     [[nodiscard]] std::size_t num_sends() const noexcept { return sends_.size(); }
 
     /// Control thread: reserve and set the input delay (7.2, lip-sync).

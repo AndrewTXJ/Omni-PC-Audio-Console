@@ -37,13 +37,13 @@ card at all.
 Phase 1 is mostly rig work, because most of its targets are about converters,
 clocks, buses and drivers, which no renderer can simulate.
 
-**A harness is not a schedule.** Offline does not mean runnable at M1: a test can
-need no sound card and still need engine features that arrive later. Of Phase 1's
-four fully-offline tests, only QS-01 and QS-05 are reachable at M1, which is
-graph, strips, buses, sends, smoothing and meters. QS-04 needs patching (M3), and
-QS-07 needs a patch change, a profile switch and a layout switch, so it is not
-complete until profiles land at M5. Each test below names what it needs; do not
-read the Offline column as "ready first".
+**A harness is not a schedule.** Offline does not mean runnable immediately: a
+test can need no sound card and still need engine features that arrive later. Of
+Phase 1's four fully-offline tests, QS-01 and QS-05 were reachable at M1 (graph,
+strips, buses, sends, smoothing, meters); QS-04 became complete once the Patch
+window landed, because its many-to-one and one-to-many cases are patches; and
+QS-07 is still partial, because a profile switch needs profiles (M5). Each test
+below names what it needs; do not read the Offline column as "ready first".
 
 Phase 2 inverts: six of eight are offline, because DSP correctness is
 arithmetic. That is where building the offline renderer first (4.1, M1) pays
@@ -181,6 +181,11 @@ only the first can fail the engine.
 ### QS-04 Channel isolation
 
 **Target.** Bit-exact silence on unpatched channels.
+
+**Status: complete.** Both patch shapes are exercised, because the Patch window
+(4.2) exists. A patch reads a bus's OUTPUT, after its fader, mute and safety
+limiter, per 7.1 — which is what makes the processing order a dependency problem
+and the schedule a topological sort rather than a fixed sequence.
 
 - **Procedure.** Drive one channel of a multichannel device at −1 dBFS. Render
   all other channels. Repeat for each channel in turn, and repeat with a
@@ -534,8 +539,8 @@ harness column above says what a test *can* be; this says what exists:
 |---|---|
 | QS-01 | **Runs.** Bit-exact null through the library and through `omni-render`, at 16, 24 and 32 bit and float, including denormals and signed zero |
 | QS-05 | **Runs.** Gain within 0.01 dB across trim and fader; all four pan laws within 0.05 dB; centred balance and 0 dB exact |
-| QS-04 | **Partly.** The send-matrix subset: unrouted, silent-source, muted and −inf-fader buses are all exactly zero. The many-to-one and one-to-many *patches* need the Patch window (M3) |
-| QS-07 | **Partly.** Mute, fader and send toggles, including a reversal mid-ramp. Patch changes need M3 and profile switches M5 |
+| QS-04 | **Runs, in full.** Unrouted, silent-source, muted and −inf-fader buses are exactly zero, and so are the many-to-one and one-to-many patch cases now the Patch window exists. An unpatched *channel* of a patched strip is exactly silent too |
+| QS-07 | **Partly.** Mute, fader and send toggles including a reversal mid-ramp, plus patch add and remove crossfades. Profile switches need M5; a layout switch needs the Simple view (M3) |
 | QS-02, QS-03B, QS-06B, QS-08 to QS-10 | Not yet — all need the audio backends (M2) or the rig |
 | QS-11 to QS-19 | Phase 2 and 3 |
 
@@ -543,9 +548,19 @@ The engine's own units — saturating conversion, the safety limiter, metering,
 the delay line and WAV round-tripping — are covered separately.
 
 The suite is checked against deliberately broken builds rather than only against
-a working one: breaking unity gain to `0.99999994f`, leaking `1e-30f` into a
-zeroed bus, and advancing a mute ramp twice per frame are each caught. The last
-is caught *only* by QS-07, which is why that partial test is worth having now.
+a working one. Each of these is caught: unity gain broken to `0.99999994f`,
+`1e-30f` leaked into a zeroed bus, a mute ramp advanced twice per frame, loop
+detection always answering "no cycle", and a patch that replaces instead of
+summing. The ramp one is caught *only* by QS-07, which is why that partial test
+is worth having now.
+
+One mutant initially **survived**, and fixing that taught something: processing
+strips and buses in naive order instead of dependency order still passed, because
+strips accumulate into a bus buffer before the bus is processed, so a patch found
+the raw sum sitting there. 7.1 puts the output patch after the fader, mute and
+safety limiter, so a patch must read the bus OUTPUT. QS-04 now asserts that
+directly — a source bus at −20 dB must arrive 20 dB down, and a muted source bus
+must patch exact silence — and the naive order is caught.
 
 ## Open questions
 

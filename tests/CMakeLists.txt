@@ -7,6 +7,7 @@ set(OMNI_TESTS
   test_qs07_ramps
   test_dsp_units
   test_command_queue
+  test_patch
 )
 
 foreach(t IN LISTS OMNI_TESTS)

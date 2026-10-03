@@ -21,10 +21,18 @@
 #include <vector>
 
 #include "omni/engine/bus.hpp"
+#include "omni/engine/patch.hpp"
 #include "omni/engine/strip.hpp"
 #include "omni/engine/types.hpp"
 
 namespace omni {
+
+/// One entry in the compiled schedule.
+struct ScheduleStep {
+    enum class Kind : std::uint8_t { Strip, Bus };
+    Kind kind = Kind::Strip;
+    std::uint32_t index = 0;
+};
 
 struct GraphConfig {
     double sample_rate = 48000.0;
@@ -61,6 +69,37 @@ class Graph {
     void snap() noexcept {
         for (auto& s : strips_) s.snap();
         for (auto& b : buses_) b.snap();
+        patches_.snap();
+    }
+
+    // ---- patching (4.2) -------------------------------------------------
+
+    [[nodiscard]] PatchBay& patch_bay() noexcept { return patches_; }
+    [[nodiscard]] const PatchBay& patch_bay() const noexcept { return patches_; }
+
+    /// Control thread. Validates, rejects a patch that would create a feedback
+    /// loop, then adds it and recompiles the schedule. `why` carries the
+    /// explanation 4.2 requires the UI to show.
+    PatchResult add_patch(const Endpoint& from, const Endpoint& to, float gain_db,
+                          std::string& why);
+
+    /// Control thread. Begins the fade-out; prune_patches() erases it once silent.
+    bool remove_patch(const Endpoint& from, const Endpoint& to);
+
+    /// Control thread, between blocks.
+    std::size_t prune_patches();
+
+    /// Would enabling this send create a loop? Lets the UI refuse an A/B button
+    /// for the same reason it refuses a patch, rather than allowing a howl.
+    [[nodiscard]] bool send_would_loop(std::size_t strip, std::size_t bus) const;
+
+    /// Control thread. Recompute the processing order. False, with `why`, if the
+    /// graph contains a cycle -- which add_patch and send_would_loop exist to
+    /// prevent, so a false here means something bypassed them.
+    bool compile(std::string& why);
+
+    [[nodiscard]] const std::vector<ScheduleStep>& schedule() const noexcept {
+        return schedule_;
     }
 
     /// Zero every strip input buffer. Convenience for callers between blocks;
@@ -71,9 +110,24 @@ class Graph {
     void process(std::size_t frames) noexcept;
 
   private:
+    /// Kahn's algorithm over strips and buses, returning a processing order and
+    /// false if the graph contains a cycle. Iterative, so a large graph cannot
+    /// blow the stack.
+    ///
+    /// `extra_send_*` optionally adds one strip -> bus edge that is not in the
+    /// graph yet, which is how send_would_loop() tests an A/B button before the
+    /// user is allowed to press it. A prospective PATCH is tested differently --
+    /// add_patch() inserts it and re-runs this, then rolls back -- because a patch
+    /// has state (its crossfade ramp) that insert() owns.
+    bool compute_order(std::vector<ScheduleStep>& out,
+                       const std::uint32_t* extra_send_strip,
+                       const std::uint32_t* extra_send_bus) const;
+
     GraphConfig config_{};
     std::vector<Strip> strips_;
     std::vector<Bus> buses_;
+    PatchBay patches_;
+    std::vector<ScheduleStep> schedule_;
     std::vector<float> strip_storage_;
     std::vector<float> bus_storage_;
     std::vector<float*> strip_ptrs_;

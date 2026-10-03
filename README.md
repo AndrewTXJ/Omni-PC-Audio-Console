@@ -22,12 +22,18 @@ What works today:
 
 - A graph of strips and buses with sends, smoothing, metering and a safety
   limiter, following the signal flow in roadmap 7.1.
+- **Any-to-any patching** with **loop protection** (4.2): a bus can feed a strip,
+  many-to-one and one-to-many both work, patch changes crossfade over 10 ms, and
+  a patch that would create a feedback loop is refused with an explanation. The
+  processing order is a **compiled schedule** (4.1) — a topological sort, because
+  a patch reads a bus's output and that makes ordering a dependency problem.
 - A **lock-free parameter queue** (4.6), so the UI can change a fader while the
   audio thread runs, with no lock and no allocation on the audio side.
 - An **ALSA backend** that negotiates format, rate and buffering, converts with
   the saturating converters, and recovers from xruns.
-- The null tests: the unity path is **bit-exact**, and unrouted buses are
-  **exactly** silent — through the library and through the renderer.
+- The null tests: the unity path is **bit-exact**, and unrouted buses and
+  channels are **exactly** silent — through the library and through the renderer.
+  QS-01, QS-04 and QS-05 now pass in full.
 
 **What is not verified, and why.** `omni-mixer` has never driven a real sound
 card. It was developed in a container with no audio hardware, where the only
